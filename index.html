@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Daily Drilling Report</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #eef2f7; color: #1e2a35;
+      height: 100vh; overflow: hidden;
+      display: flex; flex-direction: column; font-size: 13px;
+    }
+
+    /* ══ HEADER ══ */
+    #header {
+      background: linear-gradient(135deg, #1a6fa8 0%, #20A7C9 100%);
+      color: #fff; display: flex; align-items: stretch;
+      flex-shrink: 0; border-bottom: 3px solid #0e4f7a;
+    }
+    #metrics {
+      display: grid;
+      grid-template-columns: 140px 130px 130px;
+      grid-template-rows: 26px 28px 28px;
+      border-right: 2px solid rgba(255,255,255,.25);
+    }
+    #metrics .mh {
+      background: rgba(0,0,0,.18);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; letter-spacing: .5px;
+      text-transform: uppercase; border-right: 1px solid rgba(255,255,255,.15);
+    }
+    #metrics .mlabel {
+      background: rgba(0,0,0,.10);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 600;
+      border-top: 1px solid rgba(255,255,255,.15);
+      border-right: 1px solid rgba(255,255,255,.15); padding: 0 8px;
+    }
+    #metrics .mval {
+      background: rgba(255,255,255,.08);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 700;
+      border-top: 1px solid rgba(255,255,255,.15);
+      border-right: 1px solid rgba(255,255,255,.1); color: #d4f0ff;
+    }
+    #header-title {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 800; letter-spacing: 1.5px;
+      text-transform: uppercase; text-shadow: 0 1px 4px rgba(0,0,0,.3);
+    }
+    #header-date {
+      display: flex; flex-direction: column;
+      align-items: flex-end; justify-content: center;
+      padding: 0 18px; gap: 4px; min-width: 160px;
+      border-left: 2px solid rgba(255,255,255,.25);
+    }
+    #header-date .proyecto { font-size: 11px; opacity: .8; font-weight: 500; }
+    #header-date .fecha    { font-size: 13px; font-weight: 700; }
+
+    /* ══ GRID ══ */
+    #cuerpo {
+      flex: 1; display: grid;
+      grid-template-columns: 240px 1fr 1fr;
+      grid-template-rows: 1fr 200px;
+      gap: 10px; padding: 10px; min-height: 0;
+    }
+    .panel {
+      background: #fff; border-radius: 8px; border: 1px solid #ccd6e0;
+      box-shadow: 0 1px 6px rgba(0,0,0,.07);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .ptitle {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .6px; padding: 5px 10px; flex-shrink: 0;
+      border-bottom: 1px solid #e0e8f0; background: #f5f8fb; color: #5a7a90;
+    }
+
+    /* Tabla izquierda */
+    #p-t1 { grid-column: 1; grid-row: 1; border-color: #4a90d9; }
+    #p-t1 .ptitle { color: #2060a0; border-color: #b8d4f0; background: #eaf2fb; }
+
+    /* Visor fotos */
+    #p-img { grid-column: 2; grid-row: 1; border-color: #5aab7a; }
+    #p-img .ptitle { color: #2a7a4a; border-color: #b8dfc8; background: #eaf5ee; }
+    #img-container {
+      flex: 1; position: relative;
+      display: flex; align-items: center; justify-content: center;
+      background: #f0f7f2; overflow: hidden; cursor: grab;
+    }
+    #img-container.dragging { cursor: grabbing; }
+    #img-container img {
+      max-width: 100%; max-height: 100%;
+      object-fit: contain; display: block; border-radius: 4px;
+      transform-origin: center center;
+      transition: transform .08s ease;
+      user-select: none; pointer-events: none;
+    }
+    .arrow {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      background: rgba(0,0,0,.45); color: #fff; border: none;
+      border-radius: 50%; width: 36px; height: 36px; font-size: 18px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      opacity: 0; transition: opacity .2s; z-index: 10;
+    }
+    #img-container:hover .arrow { opacity: 1; }
+    #arrow-prev { left: 10px; }
+    #arrow-next { right: 10px; }
+    .arrow:hover { background: rgba(0,0,0,.70); }
+    #img-counter {
+      position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,.4); color: #fff; font-size: 10px;
+      padding: 2px 10px; border-radius: 20px;
+      pointer-events: none; opacity: 0; transition: opacity .2s;
+    }
+    #img-container:hover #img-counter { opacity: 1; }
+    #zoom-hint {
+      position: absolute; top: 8px; right: 10px;
+      background: rgba(0,0,0,.35); color: #fff; font-size: 10px;
+      padding: 2px 8px; border-radius: 20px;
+      pointer-events: none; opacity: 0; transition: opacity .2s;
+    }
+    #img-container:hover #zoom-hint { opacity: 1; }
+    #zoom-reset {
+      position: absolute; top: 8px; left: 10px;
+      background: rgba(0,0,0,.40); color: #fff; font-size: 10px;
+      padding: 2px 9px; border-radius: 20px; border: none;
+      cursor: pointer; display: none; z-index: 10;
+    }
+    #zoom-reset:hover { background: rgba(0,0,0,.65); }
+
+    /* iframe 3D */
+    #p-web { grid-column: 3; grid-row: 1; border-color: #d9706a; }
+    #p-web .ptitle { color: #a03030; border-color: #f0c8c8; background: #fdf0f0; }
+    #p-web iframe { flex: 1; border: none; width: 100%; height: 100%; display: block; }
+
+    /* Tabla inferior */
+    #p-t2 { grid-column: 1 / 4; grid-row: 2; border-color: #8a6abd; }
+    #p-t2 .ptitle { color: #5a3a9a; border-color: #d0c0f0; background: #f5f0fc; }
+
+    /* Tablas */
+    .tscroll { flex: 1; overflow: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+    thead th {
+      background: #f0f4f8; padding: 5px 8px; text-align: left;
+      font-size: 10.5px; font-weight: 700; color: #5a7a90;
+      border-bottom: 1.5px solid #d0dce8; position: sticky; top: 0; white-space: nowrap;
+    }
+    tbody td { padding: 4px 8px; border-bottom: 1px solid #f0f4f7; white-space: nowrap; }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: #f0f8ff; }
+    .err { color: #a05050; font-style: italic; padding: 10px 8px; }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════════════
+     ▶▶ CONFIGURACIÓN — editar solo esta sección cada día
+     ════════════════════════════════════════════════════════════════ -->
+<script>
+const CONFIG = {
+  proyecto : "PROJECT — APC-2026",
+
+  // ── URL de la página web / visor 3D (panel rojo) ─────────────────
+  url_web : "https://PEGA-AQUI-TU-URL.com",
+
+  // ── Fotos del día (panel verde) ───────────────────────────────────
+  // Rutas relativas desde la raíz del repo
+  // Agregar o quitar líneas según las fotos subidas cada día
+  imagenes : [
+    "fotos/foto_01.jpg",
+    "fotos/foto_02.jpg",
+    "fotos/foto_03.jpg",
+  ],
+
+  // ── CSV ───────────────────────────────────────────────────────────
+  csv_izq : "drilling.csv",   // tabla izquierda
+  csv_inf : "geotech.csv",    // tabla inferior
+
+  // ── Cuántas columnas mostrar de cada CSV (desde la primera) ───────
+  cols_izq : 4,
+  cols_inf : 9,
+
+  // ── Índice (0-based) de la columna numérica a sumar en el header ──
+  col_drilling : 3,   // drilling.csv → Meters_Drilling
+  col_geotech  : 2,   // geotech.csv  → RQD (cambia si necesitas otra)
+};
+</script>
+<!-- ════════════════════════════════════════════════════════════════ -->
+
+<!-- ══ HEADER ══ -->
+<header id="header">
+  <div id="metrics">
+    <div class="mh" style="background:transparent;border:none"></div>
+    <div class="mh">Meters Drilling</div>
+    <div class="mh">Meters Geotech</div>
+    <div class="mlabel">Day</div>
+    <div class="mval" id="val-drill-day">—</div>
+    <div class="mval" id="val-geo-day">—</div>
+    <div class="mlabel">Month</div>
+    <div class="mval" id="val-drill-month">—</div>
+    <div class="mval" id="val-geo-month">—</div>
+  </div>
+  <div id="header-title">Daily Drilling Report</div>
+  <div id="header-date">
+    <span class="proyecto" id="span-proyecto"></span>
+    <span class="fecha"    id="span-fecha"></span>
+  </div>
+</header>
+
+<!-- ══ CUERPO ══ -->
+<main id="cuerpo">
+
+  <div class="panel" id="p-t1">
+    <div class="ptitle">Drilling Log</div>
+    <div class="tscroll"><table id="tbl-izq"></table></div>
+  </div>
+
+  <div class="panel" id="p-img">
+    <div class="ptitle">Core Photos</div>
+    <div id="img-container">
+      <button class="arrow" id="arrow-prev">&#8249;</button>
+      <img id="la-foto" src="" alt="Core photo" />
+      <button class="arrow" id="arrow-next">&#8250;</button>
+      <span id="img-counter"></span>
+      <span id="zoom-hint">🔍 scroll para zoom</span>
+      <button id="zoom-reset">↺ reset</button>
+    </div>
+  </div>
+
+  <div class="panel" id="p-web">
+    <div class="ptitle">3D Viewer</div>
+    <iframe id="el-iframe" title="Visor 3D"></iframe>
+  </div>
+
+  <div class="panel" id="p-t2">
+    <div class="ptitle">Geotechnical Log</div>
+    <div class="tscroll"><table id="tbl-inf"></table></div>
+  </div>
+
+</main>
+
+<script>
+  /* ── Proyecto, fecha e iframe 3D ── */
+  document.getElementById('span-proyecto').textContent = CONFIG.proyecto;
+  document.getElementById('span-fecha').textContent =
+    new Date().toLocaleDateString('es-CO',
+      {weekday:'short', day:'2-digit', month:'short', year:'numeric'});
+  document.getElementById('el-iframe').src = CONFIG.url_web;
+
+  /* ── Parsear CSV ── */
+  function parseCSV(text) {
+    const lines   = text.trim().split('\n').filter(l => l.trim());
+    const headers = lines[0].split(',').map(h => h.trim());
+    const rows    = lines.slice(1).map(l => l.split(',').map(c => c.trim()));
+    return { headers, rows };
+  }
+
+  /* ── Renderizar tabla (n primeras columnas) ── */
+  function renderTabla(id, headers, rows, ncols) {
+    const h  = headers.slice(0, ncols);
+    const th = h.map(x => `<th>${x}</th>`).join('');
+    const tr = rows.map(r =>
+      '<tr>' + r.slice(0, ncols).map(c => `<td>${c}</td>`).join('') + '</tr>'
+    ).join('');
+    document.getElementById(id).innerHTML =
+      `<thead><tr>${th}</tr></thead><tbody>${tr}</tbody>`;
+  }
+
+  /* ── Sumar columna numérica ── */
+  function sumar(rows, col) {
+    return rows.reduce((acc, r) => acc + (parseFloat(r[col]) || 0), 0);
+  }
+
+  /* ── Cargar CSV izquierda (drilling) ── */
+  fetch(CONFIG.csv_izq)
+    .then(r => r.text())
+    .then(t => {
+      const { headers, rows } = parseCSV(t);
+      renderTabla('tbl-izq', headers, rows, CONFIG.cols_izq);
+      const total = sumar(rows, CONFIG.col_drilling);
+      document.getElementById('val-drill-day').textContent   = total.toFixed(1);
+      document.getElementById('val-drill-month').textContent = total.toFixed(1);
+    })
+    .catch(() => {
+      document.getElementById('tbl-izq').innerHTML =
+        `<tbody><tr><td class="err">No se encontró: ${CONFIG.csv_izq}</td></tr></tbody>`;
+    });
+
+  /* ── Cargar CSV inferior (geotech) ── */
+  fetch(CONFIG.csv_inf)
+    .then(r => r.text())
+    .then(t => {
+      const { headers, rows } = parseCSV(t);
+      renderTabla('tbl-inf', headers, rows, CONFIG.cols_inf);
+      const total = sumar(rows, CONFIG.col_geotech);
+      document.getElementById('val-geo-day').textContent   = total.toFixed(1);
+      document.getElementById('val-geo-month').textContent = total.toFixed(1);
+    })
+    .catch(() => {
+      document.getElementById('tbl-inf').innerHTML =
+        `<tbody><tr><td class="err">No se encontró: ${CONFIG.csv_inf}</td></tr></tbody>`;
+    });
+
+  /* ── Visor de fotos con zoom y drag ── */
+  let idx = 0;
+  const fotos      = CONFIG.imagenes;
+  const laFoto     = document.getElementById('la-foto');
+  const counter    = document.getElementById('img-counter');
+  const contenedor = document.getElementById('img-container');
+  const btnReset   = document.getElementById('zoom-reset');
+
+  let scale = 1, tx = 0, ty = 0;
+  let dragging = false, startX, startY, lastTx, lastTy;
+
+  function applyTransform() {
+    laFoto.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+    btnReset.style.display = scale !== 1 ? 'block' : 'none';
+  }
+  function resetZoom() { scale = 1; tx = 0; ty = 0; applyTransform(); }
+
+  function mostrarFoto(i) {
+    idx = (i + fotos.length) % fotos.length;
+    laFoto.src = fotos[idx];
+    counter.textContent = (idx + 1) + ' / ' + fotos.length;
+    resetZoom();
+  }
+  if (fotos.length > 0) mostrarFoto(0);
+
+  document.getElementById('arrow-prev').onclick = () => mostrarFoto(idx - 1);
+  document.getElementById('arrow-next').onclick = () => mostrarFoto(idx + 1);
+  btnReset.onclick = resetZoom;
+
+  /* Zoom con scroll del mouse */
+  contenedor.addEventListener('wheel', e => {
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 0.15 : -0.15;
+    scale = Math.min(8, Math.max(1, scale + delta));
+    if (scale === 1) { tx = 0; ty = 0; }
+    applyTransform();
+  }, { passive: false });
+
+  /* Drag para mover imagen ampliada */
+  contenedor.addEventListener('mousedown', e => {
+    if (scale === 1) return;
+    dragging = true;
+    startX = e.clientX; startY = e.clientY;
+    lastTx = tx; lastTy = ty;
+    contenedor.classList.add('dragging');
+  });
+  window.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    tx = lastTx + (e.clientX - startX);
+    ty = lastTy + (e.clientY - startY);
+    applyTransform();
+  });
+  window.addEventListener('mouseup', () => {
+    dragging = false;
+    contenedor.classList.remove('dragging');
+  });
+</script>
+
+</body>
+</html>
