@@ -1,6 +1,6 @@
 Hole_ID,From,To,Meters_Drilling,Litologia,Observacion
-APC-145,0,45,45,Andesita,Sin novedad
-APC-145,45,98,53,Brecha,Fracturado
+APC-155,0,45,45,Andesita,Sin novedad
+SASAC-145,45,98,53,Brecha,Fracturado
 APC-145,98,150,52,Granodiorita,Núcleo bueno
 APC-146,0,60,60,Andesita,Sin novedad
 APC-146,60,120,60,Cuarzo,Veta visible
